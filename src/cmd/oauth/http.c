@@ -138,12 +138,12 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rf
 			if(m > rtotal)
 				m = rtotal;
 			if((n = read(rfd, buf, m)) <= 0){
-				fprint(2, "read: missing data\n");
+				werrstr("read: missing data");
 				proto->close(fd);
 				return nil;
 			}
 			if(proto->write(fd, buf, n) != n){
-				fprint(2, "write data: %r\n");
+				werrstr("write data: %r");
 				proto->close(fd);
 				return nil;
 			}
@@ -165,7 +165,7 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rf
 
 	n = parseheader(buf, total, hdr);
 	if(n < 0){
-		fprint(2, "failed response parse: %r\n");
+		werrstr("failed response parse: %r");
 		proto->close(fd);
 		return nil;
 	}
