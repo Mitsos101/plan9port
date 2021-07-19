@@ -71,7 +71,7 @@ dojsonhttp(Protocol *proto, char *host, char *request)
 	return data;
 }
 
-Json*
+static Json*
 jsonrpc(Protocol *proto, char *host, char *path, char *request)
 {
 	char *httpreq, *request, *reply;
@@ -100,27 +100,6 @@ jsonrpc(Protocol *proto, char *host, char *path, char *request)
 	werrstr("%J", jerror);
 	jclose(jv);
 	return nil;
-}
-
-Json*
-ncpost(char *host, char *path, char *name1, ...)
-{
-	Json *jv;
-	va_list arg;
-
-	va_start(arg, name1);
-	jv = jsonrpc(&https, host, path, makerequest(name1, arg));
-	va_end(arg);
-	return jv;
-}
-
-Json*
-ncget(char *host, char *path)
-{
-	Json *jv;
-
-	jv = jsonrpc(&https, host, path, nil);
-	return jv;
 }
 
 Json*

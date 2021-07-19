@@ -84,7 +84,9 @@ enum
 	MaxResponse = 1<<29,
 };
 
-Json*	jsonrpc(Protocol *proto, char *host, char *path, char *method, char *name1, va_list arg);
+Json*	urlpost(char *s, char *name1, ...);
+Json*	urlget(char *s);
+
 
 enum
 {
