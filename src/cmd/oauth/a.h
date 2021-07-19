@@ -75,7 +75,7 @@ struct HTTPHeader
 	char contenttype[100];
 };
 
-char *httpreq(Protocol *proto, char *host, char *request, HTTPHeader *hdr, int rfd, vlong rlength);
+char *httpreq(Protocol *proto, char *host, char *request, HTTPHeader *hdr);
 
 // JSON RPC
 
@@ -84,7 +84,7 @@ enum
 	MaxResponse = 1<<29,
 };
 
-Json*	jsonrpc(Protocol *proto, char *host, char *path, char *method, char *name1, va_list arg, int usecache);
+Json*	jsonrpc(Protocol *proto, char *host, char *path, char *method, char *name1, va_list arg);
 
 enum
 {
