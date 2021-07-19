@@ -90,3 +90,27 @@ enum
 {
 	STACKSIZE = 32768
 };
+
+// URL parser
+enum {
+	Domlen = 256,
+};
+
+typedef struct Url Url;
+struct Url
+{
+	char	*scheme;
+	char	*user;
+	char	*pass;
+	char	*host;
+	char	*port;
+	char	*path;
+	char	*query;
+	char	*fragment;
+};
+
+
+char*	Upath(Url *);
+Url*	url(char *s);
+Url*	saneurl(Url *u);
+void	freeurl(Url *u);

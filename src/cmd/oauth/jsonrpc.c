@@ -8,13 +8,19 @@ makehttprequest(char *host, char *path, char *postdata)
 	Fmt fmt;
 
 	fmtstrinit(&fmt);
-	fmtprint(&fmt, "POST %s HTTP/1.0\r\n", path);
-	fmtprint(&fmt, "Host: %s\r\n", host);
-	fmtprint(&fmt, "User-Agent: " USER_AGENT "\r\n");
-	fmtprint(&fmt, "Content-Type: application/x-www-form-urlencoded\r\n");
-	fmtprint(&fmt, "Content-Length: %d\r\n", strlen(postdata));
-	fmtprint(&fmt, "\r\n");
-	fmtprint(&fmt, "%s", postdata);
+	if(postdata){
+		fmtprint(&fmt, "POST %s HTTP/1.0\r\n", path);
+		fmtprint(&fmt, "Host: %s\r\n", host);
+		fmtprint(&fmt, "User-Agent: " USER_AGENT "\r\n");
+		fmtprint(&fmt, "Content-Type: application/x-www-form-urlencoded\r\n");
+		fmtprint(&fmt, "Content-Length: %d\r\n", strlen(postdata));
+		fmtprint(&fmt, "\r\n");
+		fmtprint(&fmt, "%s", postdata);
+	} else{
+		fmtprint(&fmt, "GET %s HTTP/1.0\r\n", path);
+		fmtprint(&fmt, "Host: %s\r\n", host);
+		fmtprint(&fmt, "User-Agent: " USER_AGENT "\r\n");
+	}
 	return fmtstrflush(&fmt);
 }
 
@@ -44,12 +50,12 @@ makerequest(char *name1, va_list arg)
 }
 
 static char*
-dojsonhttp(Protocol *proto, char *host, char *request, int rfd, vlong rlength)
+dojsonhttp(Protocol *proto, char *host, char *request)
 {
 	char *data;
 	HTTPHeader hdr;
 
-	data = httpreq(proto, host, request, &hdr, rfd, rlength);
+	data = httpreq(proto, host, request, &hdr);
 	if(data == nil){
 		werrstr("httpreq: %r");
 		return nil;
@@ -66,12 +72,10 @@ dojsonhttp(Protocol *proto, char *host, char *request, int rfd, vlong rlength)
 }
 
 Json*
-jsonrpc(Protocol *proto, char *host, char *path, char *name1, va_list arg)
+jsonrpc(Protocol *proto, char *host, char *path, char *request)
 {
 	char *httpreq, *request, *reply;
 	Json *jv, *jerror;
-
-	request = makerequest(name1, arg);
 
 	httpreq = makehttprequest(host, path, request);
 	free(request);
@@ -105,7 +109,16 @@ ncpost(char *host, char *path, char *name1, ...)
 	va_list arg;
 
 	va_start(arg, name1);
-	jv = jsonrpc(&https, host, path, name1, arg);
+	jv = jsonrpc(&https, host, path, makerequest(name1, arg));
 	va_end(arg);
+	return jv;
+}
+
+Json*
+ncget(char *host, char *path)
+{
+	Json *jv;
+
+	jv = jsonrpc(&https, host, path, nil);
 	return jv;
 }
