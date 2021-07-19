@@ -106,7 +106,7 @@ parseheader(char *buf, int n, HTTPHeader *hdr)
 }
 
 static char*
-genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rfd, vlong rtotal)
+genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 {
 	int n, m, total, want;
 	char buf[8192], *data;
@@ -130,25 +130,6 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rf
 			fprint(2, "write %s: %r\n", host);
 		proto->close(fd);
 		return nil;
-	}
-
-	if(rfd >= 0){
-		while(rtotal > 0){
-			m = sizeof buf;
-			if(m > rtotal)
-				m = rtotal;
-			if((n = read(rfd, buf, m)) <= 0){
-				werrstr("read: missing data");
-				proto->close(fd);
-				return nil;
-			}
-			if(proto->write(fd, buf, n) != n){
-				werrstr("write data: %r");
-				proto->close(fd);
-				return nil;
-			}
-			rtotal -= n;
-		}
 	}
 
 	total = 0;
@@ -183,16 +164,8 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rf
 
 	while(want > 0 && (n = proto->read(fd, buf, want)) > 0){
 	didread:
-		if(wfd >= 0){
-			if(writen(wfd, buf, n) < 0){
-				proto->close(fd);
-				werrstr("write error");
-				return nil;
-			}
-		}else{
-			data = erealloc(data, total+n);
-			memmove(data+total, buf, n);
-		}
+		data = erealloc(data, total+n);
+		memmove(data+total, buf, n);
 		total += n;
 		if(total > MaxResponse){
 			proto->close(fd);
@@ -219,19 +192,7 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int wfd, int rf
 }
 
 char*
-httpreq(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int rfd, vlong rlength)
+httpreq(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 {
-	return genhttp(proto, host, req, hdr, -1, rfd, rlength);
-}
-
-int
-httptofile(Protocol *proto, char *host, char *req, HTTPHeader *hdr, int fd)
-{
-	if(fd < 0){
-		werrstr("bad fd");
-		return -1;
-	}
-	if(genhttp(proto, host, req, hdr, fd, -1, 0) == nil)
-		return -1;
-	return 0;
+	return genhttp(proto, host, req, hdr);
 }
