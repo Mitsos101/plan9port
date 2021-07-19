@@ -122,3 +122,40 @@ ncget(char *host, char *path)
 	jv = jsonrpc(&https, host, path, nil);
 	return jv;
 }
+
+Json*
+urlpost(char *s, char *name1, ...)
+{
+	Json *jv;
+	va_list arg;
+	Url *u;
+
+	if((u = saneurl(url(s))) == nil){
+		werrstr("url parsing error");
+		return nil;
+	}
+
+	va_start(arg, name1);
+	jv = jsonrpc(&https, u->host, Upath(u), makerequest(name1, arg));
+	va_end(arg);
+	freeurl(u);
+	return jv;
+}
+
+Json*
+urlget(char *s)
+{
+	Json *jv;
+	Url *u;
+
+	if((u = saneurl(url(s))) == nil){
+		werrstr("url parsing error");
+		return nil;
+	}
+
+	jv = jsonrpc(&https, u->host, Upath(u), nil);
+	freeurl(u);
+	return jv;
+}
+
+

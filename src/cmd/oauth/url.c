@@ -178,7 +178,7 @@ Abs:
 	if(p[0] == '/' && p[1] == '/'){
 		p += 2;
 		if(x = strchr(p, '/')){
-			u->path = t = abspath(x, Upath(b));
+			u->path = t = abspath(x, nil);
 			*x = 0;
 		}
 		if(x = strchr(p, '@')){
@@ -203,7 +203,7 @@ Abs:
 		}
 		u->host = p;
 	} else {
-		u->path = t = abspath(p, Upath(b));
+		u->path = t = abspath(p, nil);
 	}
 Out:
 	pstrdup(&u->scheme);
