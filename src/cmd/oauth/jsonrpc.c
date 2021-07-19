@@ -76,7 +76,7 @@ jsonrpc(Protocol *proto, char *host, char *path, char *name1, va_list arg)
 	httpreq = makehttprequest(host, path, request);
 	free(request);
 
-	if((reply = dojsonhttp(proto, host, httpreq, -1, 0)) == nil){
+	if((reply = dojsonhttp(proto, host, httpreq)) == nil){
 		free(httpreq);
 		return nil;
 	}
