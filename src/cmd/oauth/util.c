@@ -30,21 +30,6 @@ estrdup(char *s)
 }
 
 int
-writen(int fd, void *buf, int n)
-{
-	long m, tot;
-
-	for(tot=0; tot<n; tot+=m){
-		m = n - tot;
-		if(m > 8192)
-			m = 8192;
-		if(write(fd, (uchar*)buf+tot, m) != m)
-			break;
-	}
-	return tot;
-}
-
-int
 urlencodefmt(Fmt *fmt)
 {
 	int x;
