@@ -9,7 +9,6 @@ void*	emalloc(int);
 void*	erealloc(void*, int);
 char*	estrdup(char*);
 int	urlencodefmt(Fmt*);
-int	writen(int, void*, int);
 
 // JSON parser
 
@@ -61,7 +60,6 @@ struct Protocol
 	void (*close)(Pfd*);
 };
 
-Protocol http;
 Protocol https;
 
 
@@ -88,11 +86,7 @@ enum
 
 Json*	jsonrpc(Protocol *proto, char *host, char *path, char *method, char *name1, va_list arg, int usecache);
 
-extern int chattyhttp;
-
 enum
 {
 	STACKSIZE = 32768
 };
-
-extern int printerrors;

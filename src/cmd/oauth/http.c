@@ -31,11 +31,6 @@ parseheader(char *buf, int n, HTTPHeader *hdr)
 	data[-1] = 0;
 	if(data[-2] == '\r')
 		data[-2] = 0;
-	if(chattyhttp > 1){
-		fprint(2, "--HTTP Response Header:\n");
-		fprint(2, "%s\n", buf);
-		fprint(2, "--\n");
-	}
 	nline = 0;
 	for(p=buf; *p; p=next, nline++){
 		q = strchr(p, '\n');
@@ -112,22 +107,15 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 	char buf[8192], *data;
 	Pfd *fd;
 
-	if(chattyhttp > 1){
-		fprint(2, "--HTTP Request:\n");
-		fprint(2, "%s", req);
-		fprint(2, "--\n");
-	}
 	fd = proto->connect(host);
 	if(fd == nil){
-		if(chattyhttp > 0)
-			fprint(2, "connect %s: %r\n", host);
+		werrstr("connect %s: %r", host);
 		return nil;
 	}
 
 	n = strlen(req);
 	if(proto->write(fd, req, n) != n){
-		if(chattyhttp > 0)
-			fprint(2, "write %s: %r\n", host);
+		werrstr("write %s: %r", host);
 		proto->close(fd);
 		return nil;
 	}
@@ -136,8 +124,7 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 	while(!haveheader(buf, total)){
 		n = proto->read(fd, buf+total, sizeof buf-total);
 		if(n <= 0){
-			if(chattyhttp > 0)
-				fprint(2, "read missing header\n");
+			werrstr("read missing header");
 			proto->close(fd);
 			return nil;
 		}

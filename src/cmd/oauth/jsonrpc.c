@@ -1,7 +1,5 @@
 #include "a.h"
 
-int chattyhttp;
-
 // JSON RPC over HTTP
 
 static char*

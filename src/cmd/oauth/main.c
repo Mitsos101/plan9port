@@ -1,7 +1,5 @@
 #include "a.h"
 
-int printerrors;
-
 void
 usage(void)
 {
@@ -15,9 +13,6 @@ main(int argc, char **argv)
 	char *issuer, *scope, *client_id;
 
 	ARGBEGIN{
-	case 'H':
-		chattyhttp++;
-		break;
 	default:
 		usage();
 	}ARGEND
