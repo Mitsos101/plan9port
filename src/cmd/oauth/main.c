@@ -33,8 +33,8 @@ main(int argc, char **argv)
 	scope = argv[1];
 	client_id = argv[2];
 
-	if(refreshflow(issuer, scope, client_id) < 0){
-		sysfatal("refreshflow: %r");
+	if(authcodeflow(issuer, scope, client_id) < 0){
+		sysfatal("authcodeflow: %r");
 	}
 
 	exits(nil);

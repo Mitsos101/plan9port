@@ -30,21 +30,6 @@ estrdup(char *s)
 }
 
 int
-timefmt(Fmt *f)
-{
-	Tm tm;
-	vlong ms;
-
-	ms = nsec()/1000000;
-
-	tm = *localtime(ms/1000);
-	fmtprint(f, "%02d:%02d:%02d.%03d",
-		tm.hour, tm.min, tm.sec,
-		(int)(ms%1000));
-	return 0;
-}
-
-int
 writen(int fd, void *buf, int n)
 {
 	long m, tot;

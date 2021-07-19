@@ -9,7 +9,6 @@ void*	emalloc(int);
 void*	erealloc(void*, int);
 char*	estrdup(char*);
 int	urlencodefmt(Fmt*);
-int	timefmt(Fmt*);
 int	writen(int, void*, int);
 
 // JSON parser
