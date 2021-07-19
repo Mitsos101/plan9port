@@ -1,13 +1,9 @@
 #include <u.h>
 #include <errno.h>
 #include <libc.h>
-#include <fcall.h>
-#include <thread.h>
-#include <auth.h>
-#include <9p.h>
 #include <libsec.h>
 
-#define USER_AGENT    "smugfs (part of Plan 9 from User Space)"
+#define USER_AGENT    "oauthtest"
 
 void*	emalloc(int);
 void*	erealloc(void*, int);
