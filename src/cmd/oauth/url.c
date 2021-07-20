@@ -265,3 +265,20 @@ saneurl(Url *u)
 	}
 	return u;
 }
+
+
+void
+freeurl(Url *u)
+{
+	if(u == nil)
+		return;
+	free(u->scheme);
+	free(u->user);
+	free(u->pass);
+	free(u->host);
+	free(u->port);
+	free(u->path);
+	free(u->query);
+	free(u->fragment);
+	free(u);
+}

@@ -10,6 +10,7 @@ OFILES=\
 	jsonrpc.$O\
 	main.$O\
 	openssl.$O\
+	url.$O\
 	util.$O\
 
 <$PLAN9/src/mkone

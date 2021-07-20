@@ -3,7 +3,7 @@
 void
 usage(void)
 {
-	fprint(2, "usage: refreshflow issuer scope client_id\n");
+	fprint(2, "usage: oauth issuer scope client_id\n");
 	exits("usage");
 }
 
@@ -21,6 +21,7 @@ main(int argc, char **argv)
 		usage();
 
 	quotefmtinstall();
+	fmtinstall('[', encodefmt);  // base-64
 	fmtinstall('J', jsonfmt);
 	fmtinstall('U', urlencodefmt);
 

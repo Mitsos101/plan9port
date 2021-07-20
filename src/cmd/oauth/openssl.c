@@ -2,9 +2,17 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/sha.h>
 #include "a.h"
 
 AUTOLIB(ssl)
+
+void* sha2_256(uchar *data, ulong len, uchar* buf, void* v)
+{
+	SHA256(data, len, buf);
+	return v;
+}
+
 
 static void
 httpsinit(void)

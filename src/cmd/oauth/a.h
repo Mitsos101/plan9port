@@ -116,3 +116,12 @@ char*	Upath(Url *);
 Url*	url(char *s);
 Url*	saneurl(Url *u);
 void	freeurl(Url *u);
+
+// SHA256
+
+enum
+{
+	SHA2_256dlen=	32,	/* SHA-256 digest length */
+};
+
+void*	sha2_256(uchar*, ulong, uchar*, void*);
