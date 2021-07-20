@@ -10,6 +10,7 @@ void* sha2_256(uchar *data, ulong len, uchar* buf, void* v)
 
 struct Pfd
 {
+	dispatch_queue_t q;
 	nw_connection_t conn;
 };
 
@@ -17,6 +18,7 @@ struct Pfd
 static Pfd*
 macosconnect(char *host)
 {
+	dispatch_queue_t q;
 	nw_endpoint_t endpoint;
 	nw_parameters_t parameters;
 	nw_parameters_configure_protocol_block_t configure_tls;
@@ -24,6 +26,7 @@ macosconnect(char *host)
 	nw_connection_t connection;
 	Pfd *pfd;
 
+	q = dispatch_queue_create(NULL, NULL);
 	endpoint = nw_endpoint_create_host(host, "https");
 
 	configure_tls = NW_PARAMETERS_DEFAULT_CONFIGURATION;
@@ -34,12 +37,12 @@ macosconnect(char *host)
 	nw_release(endpoint);
 	nw_release(parameters);
 
-	nw_connection_set_queue(connection, dispatch_get_main_queue());
-	nw_connection_set_state_changed_handler(connection, NULL);
+	nw_connection_set_queue(connection, q);
 	nw_connection_start(connection);
 
 	pfd = emalloc(sizeof(*pfd));
 	pfd->conn = connection;
+	pfd->q = q;
 	return pfd;
 }
 
@@ -50,7 +53,7 @@ macoswrite(Pfd *pfd, void *v, int n)
 	dispatch_group_t grp;
 	__block int w;
 
-	data = dispatch_data_create(v, (size_t)n, dispatch_get_main_queue(), DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+	data = dispatch_data_create(v, (size_t)n, pfd->q, DISPATCH_DATA_DESTRUCTOR_DEFAULT);
 	/* it seems okay to use a dispatch group for a single task */
 	grp = dispatch_group_create();
 	dispatch_group_enter(grp);
@@ -63,8 +66,8 @@ macoswrite(Pfd *pfd, void *v, int n)
 					}
 					dispatch_group_leave(grp);
 				});
-	dispatch_release(data);
 	dispatch_group_wait(grp, DISPATCH_TIME_FOREVER);
+	dispatch_release(data);
 	dispatch_release(grp);
 	return w;
 }
@@ -84,8 +87,8 @@ macosread(Pfd *pfd, void *v, int n)
 					errno = nw_error_get_error_code(receive_error);
 					r = -1;
 				} else {
-					dispatch_data_apply(content, ^(__unused dispatch_data_t region, __unused size_t offset, const void *buf, size_t size) {
-							memcpy(v, buf, size);
+					dispatch_data_apply(content, ^(__unused dispatch_data_t region, size_t offset, const void *buf, size_t size) {
+							memcpy(v + offset, buf, size);
 							r += size;
 							return (bool)true;
 						});
@@ -103,6 +106,7 @@ macosclose(Pfd *pfd)
 	if(pfd == nil)
 		return;
 	nw_release(pfd->conn);
+	dispatch_release(pfd->q);
 	free(pfd);
 }
 

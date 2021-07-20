@@ -22,7 +22,7 @@ main(int argc, char **argv)
 
 	quotefmtinstall();
 	fmtinstall('[', encodefmt);  // base-64
-	fmtinstall('J', jsonfmt);
+	fmtinstall('J', JSONfmt);
 	fmtinstall('U', urlencodefmt);
 
 	issuer = argv[0];

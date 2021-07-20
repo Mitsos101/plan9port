@@ -1,5 +1,6 @@
 #include <u.h>
 #include <errno.h>
+#include <ctype.h>
 #include <libc.h>
 #include <libsec.h>
 
@@ -10,45 +11,47 @@ void*	erealloc(void*, int);
 char*	estrdup(char*);
 int	urlencodefmt(Fmt*);
 
-// JSON parser
+// JSON parser, from 9front
 
-typedef struct Json Json;
+typedef struct JSONEl JSONEl;
+typedef struct JSON JSON;
 
-enum
-{
-	Jstring,
-	Jnumber,
-	Jobject,
-	Jarray,
-	Jtrue,
-	Jfalse,
-	Jnull
+#pragma varargck type "J" JSON*
+
+enum {
+	JSONNull,
+	JSONBool,
+	JSONNumber,
+	JSONString,
+	JSONArray,
+	JSONObject,
 };
 
-struct Json
-{
-	int ref;
-	int type;
-	char *string;
-	double number;
-	char **name;
-	Json **value;
-	int len;
+struct JSONEl {
+	char *name;
+	JSON *val;
+	JSONEl *next;
 };
 
-void	jclose(Json*);
-Json*	jincref(Json*);
-vlong	jint(Json*);
-Json*	jlookup(Json*, char*);
-double	jnumber(Json*);
-int	jsonfmt(Fmt*);
-int	jstrcmp(Json*, char*);
-char*	jstring(Json*);
-Json*	jwalk(Json*, char*);
-Json*	parsejson(char*);
+struct JSON
+{
+	int t;
+	union {
+		double n;
+		char *s;
+		JSONEl *first;
+	};
+};
+
+JSON*	jsonparse(char *);
+void	jsonfree(JSON *);
+JSON*	jsonbyname(JSON *, char *);
+char*	jsonstr(JSON *);
+int	JSONfmt(Fmt*);
+void	JSONfmtinstall(void);
 
 
-// Wrapper to hide whether we're using OpenSSL for HTTPS.
+// Wrapper to hide whether we're using OpenSSL or macOS' libNetwork for HTTPS.
 
 typedef struct Protocol Protocol;
 typedef struct Pfd Pfd;
@@ -84,8 +87,8 @@ enum
 	MaxResponse = 1<<29,
 };
 
-Json*	urlpost(char *s, char *name1, ...);
-Json*	urlget(char *s);
+JSON*	urlpost(char *s, char *name1, ...);
+JSON*	urlget(char *s);
 
 
 enum
@@ -125,3 +128,7 @@ enum
 };
 
 void*	sha2_256(uchar*, ulong, uchar*, void*);
+
+// idn
+
+int	idn2utf(char *name, char *buf, int nbuf);

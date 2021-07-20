@@ -3,15 +3,20 @@
 // JSON RPC over HTTP
 
 static char*
-makehttprequest(char *host, char *path, char *postdata)
+makehttprequest(char *host, char *path, char *postdata, char *user, char *pass)
 {
 	Fmt fmt;
+	char buf[512];
 
 	fmtstrinit(&fmt);
 	if(postdata){
 		fmtprint(&fmt, "POST %s HTTP/1.0\r\n", path);
 		fmtprint(&fmt, "Host: %s\r\n", host);
 		fmtprint(&fmt, "User-Agent: " USER_AGENT "\r\n");
+		if(user){
+			snprint(buf, sizeof buf, "%s:%s", user ? user : "", pass ? pass : "");
+			fmtprint(&fmt, "Authorization: Basic %.*[\r\n", strlen(buf), buf);
+		}
 		fmtprint(&fmt, "Content-Type: application/x-www-form-urlencoded\r\n");
 		fmtprint(&fmt, "Content-Length: %d\r\n", strlen(postdata));
 		fmtprint(&fmt, "\r\n");
@@ -20,6 +25,7 @@ makehttprequest(char *host, char *path, char *postdata)
 		fmtprint(&fmt, "GET %s HTTP/1.0\r\n", path);
 		fmtprint(&fmt, "Host: %s\r\n", host);
 		fmtprint(&fmt, "User-Agent: " USER_AGENT "\r\n");
+		fmtprint(&fmt, "\r\n");
 	}
 	return fmtstrflush(&fmt);
 }
@@ -60,7 +66,7 @@ dojsonhttp(Protocol *proto, char *host, char *request)
 		werrstr("httpreq: %r");
 		return nil;
 	}
-	if(strcmp(hdr.contenttype, "application/json") != 0){
+	if(strstr(hdr.contenttype, "application/json") == nil){
 		werrstr("bad content type: %s", hdr.contenttype);
 		return nil;
 	}
@@ -71,13 +77,13 @@ dojsonhttp(Protocol *proto, char *host, char *request)
 	return data;
 }
 
-static Json*
-jsonrpc(Protocol *proto, char *host, char *path, char *request)
+static JSON*
+jsonrpc(Protocol *proto, char *host, char *path, char *request, char *user, char *pass)
 {
-	char *httpreq, *request, *reply;
-	Json *jv, *jerror;
+	char *httpreq, *reply;
+	JSON *jv, *jerror;
 
-	httpreq = makehttprequest(host, path, request);
+	httpreq = makehttprequest(host, path, request, user, pass);
 	free(request);
 
 	if((reply = dojsonhttp(proto, host, httpreq)) == nil){
@@ -86,26 +92,26 @@ jsonrpc(Protocol *proto, char *host, char *path, char *request)
 	}
 	free(httpreq);
 
-	jv = parsejson(reply);
+	jv = jsonparse(reply);
 	free(reply);
 	if(jv == nil){
 		werrstr("error parsing JSON reply: %r");
 		return nil;
 	}
 
-	if((jerror = jlookup(jv, "error")) == nil){
+	if((jerror = jsonbyname(jv, "error")) == nil){
 		return jv;
 	}
 
 	werrstr("%J", jerror);
-	jclose(jv);
+	jsonfree(jv);
 	return nil;
 }
 
-Json*
-urlpost(char *s, char *name1, ...)
+JSON*
+urlpost(char *s, char *user, char *pass, char *name1, ...)
 {
-	Json *jv;
+	JSON *jv;
 	va_list arg;
 	Url *u;
 
@@ -115,16 +121,16 @@ urlpost(char *s, char *name1, ...)
 	}
 
 	va_start(arg, name1);
-	jv = jsonrpc(&https, u->host, Upath(u), makerequest(name1, arg));
+	jv = jsonrpc(&https, u->host, Upath(u), makerequest(name1, arg), user, pass);
 	va_end(arg);
 	freeurl(u);
 	return jv;
 }
 
-Json*
+JSON*
 urlget(char *s)
 {
-	Json *jv;
+	JSON *jv;
 	Url *u;
 
 	if((u = saneurl(url(s))) == nil){

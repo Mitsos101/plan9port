@@ -169,10 +169,8 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 		return nil;
 	}
 	hdr->contentlength = total;
-	else{
-		data = erealloc(data, total+1);
-		data[total] = 0;
-	}
+	data = erealloc(data, total+1);
+	data[total] = 0;
 	return data;
 }
 
