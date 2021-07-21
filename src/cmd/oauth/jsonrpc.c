@@ -77,7 +77,7 @@ dojsonhttp(Protocol *proto, char *host, char *request)
 	return data;
 }
 
-static JSON*
+JSON*
 jsonrpc(Protocol *proto, char *host, char *path, char *request, char *user, char *pass)
 {
 	char *httpreq, *reply;
@@ -138,7 +138,7 @@ urlget(char *s)
 		return nil;
 	}
 
-	jv = jsonrpc(&https, u->host, Upath(u), nil);
+	jv = jsonrpc(&https, u->host, Upath(u), nil, nil, nil);
 	freeurl(u);
 	return jv;
 }

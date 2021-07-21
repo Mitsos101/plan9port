@@ -2,7 +2,12 @@
 #include <errno.h>
 #include <ctype.h>
 #include <libc.h>
+#include <fcall.h>
+#include <thread.h>
+#include <9pclient.h>
+#include <mp.h>
 #include <libsec.h>
+#include <plumb.h>
 
 #define USER_AGENT    "oauthtest"
 
@@ -87,8 +92,9 @@ enum
 	MaxResponse = 1<<29,
 };
 
-JSON*	urlpost(char *s, char *name1, ...);
+JSON*	urlpost(char *s, char *user, char *pass, char *name1, ...);
 JSON*	urlget(char *s);
+JSON*	jsonrpc(Protocol *proto, char *host, char *path, char *request, char *user, char *pass);
 
 
 enum
@@ -132,3 +138,7 @@ void*	sha2_256(uchar*, ulong, uchar*, void*);
 // idn
 
 int	idn2utf(char *name, char *buf, int nbuf);
+
+// flows
+
+int	authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret);

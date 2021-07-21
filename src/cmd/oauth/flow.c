@@ -19,7 +19,7 @@ struct Discovery
 {
 	char *authorization_endpoint;
 	char *token_endpoint;
-}
+};
 
 static Elem discelems[] =
 {
@@ -112,7 +112,7 @@ discoveryget(char *issuer, Discovery *disc)
 {
 	JSON *jv;
 
-	jv = jsonrpc(&https, issuer, "/.well-known/openid-configuration", nil);
+	jv = jsonrpc(&https, issuer, "/.well-known/openid-configuration", nil, nil, nil);
 	if(jv == nil){
 		werrstr("jsonrpc: %r");
 		return -1;
@@ -128,28 +128,41 @@ discoveryget(char *issuer, Discovery *disc)
 
 }
 
-char
-randalnum(void)
+int
+fillrandom(char *s, int n)
 {
-		ulong x;
-		char c;
+	int len;
+	char *pos;
+	char buf[256];
+	char buf2[256];
 
-		x = ntruerand(26 + 26 + 10);
-		if(x < 26)
-			return ('a' + i);
-		x -= 26;
-		if(x < 26)
-			return ('A' + i);
-		x -= 26;
+	if(n % 4 != 0){
+		werrstr("length must be divisible by 4");
+		return -1;
+	}
+	len = (n / 4) * 3;
 
-		return ('0' + i);
+	genrandom(buf, len);
+	snprint(buf2, sizeof buf2, "%.*[", len, buf);
+
+	if((pos = strchr(buf2, '=')) != nil)
+		*pos = '\0';
+	while((pos = strchr(buf2, '+')) != nil)
+		*pos = '-';
+	while((pos = strchr(buf2, '/')) != nil)
+		*pos = '_';
+
+	strcpy(s, buf2);
+
+	return 0;
+
 }
 
 
 int
 authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 {
-	char verifier[Verifierlen];
+	char verifier[Verifierlen + 1];
 	char hash[SHA2_256dlen];
 	char challenge[2 * (sizeof hash)];
 	char state[Statelen + 1];
@@ -157,20 +170,20 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	char *s;
 	Discovery disc;
 	Tokenresp tr;
+	Plumbmsg pm;
 	Fmt fmt;
-	int ofd;
 	int wfd;
+	int ofd;
 	int r;
+	int i;
 
 
-	memset(disc, 0, sizeof disc);
+	memset(&disc, 0, sizeof disc);
 	fmtstrinit(&fmt);
-	/* generate code verifier */
-	for(i = 0; i < Verifierlen; i++){
-		verifier[i] = randalnum();
-	}
-	for(i = 0; i < Statelen; i++){
-		state[i] = randalnum();
+	/* generate code verifier and state */
+	if(fillrandom(verifier, Verifierlen) < 0 || fillrandom(state, Statelen) < 0){
+		r = -1;
+		werrstr("fillrandom: %r");
 	}
 	state[Statelen] = '\0';
 
@@ -207,7 +220,7 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	/* append client_id to url */
 	fmtprint(&fmt, "%U=%U", "client_id", client_id);
 	/* append redirect_uri to url */
-	fmtprint(&fmt, "&%U=%U", "redirect_uri", "plumbtext");
+	fmtprint(&fmt, "&%U=%U", "redirect_uri", "http://127.0.0.1:4812"); /* it is difficult to register a scheme for the plumber */
 	/* append response_type to url */
 	fmtprint(&fmt, "&%U=%U", "response_type", "code");
 	/* append scope to url */
@@ -228,11 +241,20 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 
 
 	/* plumb url to browser */
-	if((ofd = plumbopen("web", OWRITE)) < 0){
+	if((wfd = plumbopen("send", OWRITE)) < 0){
 		werrstr("plumbopen: %r");
 		r = -1;
 		goto out;
 	}
+
+	pm = (Plumbmsg){"oauth", "web", nil, "text", nil, strlen(s), s};
+
+	if(plumbsend(wfd, &pm) < 0){
+		werrstr("plumbsend: %r");
+		r = -1;
+		goto out;
+	}
+
 
 	/* TODO */
 	/* listen for response on plumb */
@@ -240,4 +262,8 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	/* exchange code with code_challenge for token */
 	/* print tokens */
 	/* done! */
+	r = 0;
+	out:
+	jsondestroy(discelems, nelem(discelems), &disc);
+	return 0;
 }
