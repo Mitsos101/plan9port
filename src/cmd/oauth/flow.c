@@ -134,6 +134,8 @@ printkey(char *issuer, char *client_id, char *client_secret, char *scope, JSON *
 {
 	Tokenresp tr;
 	long exptime;
+
+	memset(&tr, 0, sizeof tr);
 	if(readjson(j, trelems, nelem(trelems), &tr) < 0){
 		werrstr("readjson: %r");
 		return -1;
