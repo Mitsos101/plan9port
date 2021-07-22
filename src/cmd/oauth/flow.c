@@ -2,7 +2,7 @@
 
 enum
 {
-	Verifierlen = 128,
+	Verifierlen = 100,
 	Statelen = 32,
 };
 
@@ -124,8 +124,41 @@ discoveryget(char *issuer, Discovery *disc)
 		return -1;
 	}
 
+
 	return 0;
 
+}
+
+int
+printkey(char *issuer, char *client_id, char *client_secret, char *scope, JSON *j)
+{
+	Tokenresp tr;
+	long exptime;
+	if(readjson(j, trelems, nelem(trelems), &tr) < 0){
+		werrstr("readjson: %r");
+		return -1;
+	}
+	if(tr.token_type == nil || tr.access_token == nil){
+		werrstr("missing key");
+		jsondestroy(trelems, nelem(trelems), &tr);
+		return -1;
+	}
+
+
+	if(tr.expires_in == 0)
+		tr.expires_in = (long)1800; /* picked at random */
+
+	exptime = time(0) + (long)tr.expires_in;
+
+	print("key proto=oauth issuer=%q client_id=%q token_type=%q exptime=%ld scope=%q", issuer, client_id, tr.token_type, exptime, tr.scope == nil ? scope : tr.scope);
+	print(" !client_secret=%q !access_token=%q", client_secret, tr.access_token);
+	if(tr.refresh_token != nil)
+		print(" !refresh_token=%q", tr.refresh_token);
+	print("\n");
+
+
+	jsondestroy(trelems, nelem(trelems), &tr);
+	return 0;
 }
 
 int
@@ -168,9 +201,12 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	char state[Statelen + 1];
 	char *pos;
 	char *s;
+	char *state2;
+	char *code;
 	Discovery disc;
-	Tokenresp tr;
+	JSON *j;
 	Plumbmsg pm;
+	Plumbmsg* pp;
 	Fmt fmt;
 	int wfd;
 	int ofd;
@@ -185,6 +221,7 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 		r = -1;
 		werrstr("fillrandom: %r");
 	}
+	verifier[Verifierlen] = '\0';
 	state[Statelen] = '\0';
 
 	sha2_256(verifier, sizeof verifier, hash, nil);
@@ -226,9 +263,9 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	/* append scope to url */
 	fmtprint(&fmt, "&%U=%U", "scope", scope);
 	/* append code_challenge to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge", challenge);
+	fmtprint(&fmt, "&%U=%U", "code_challenge", verifier);
 	/* append code_challenge_method to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge_method", "S256");
+	fmtprint(&fmt, "&%U=%U", "code_challenge_method", "plain");
 	/* append state to url */
 	fmtprint(&fmt, "&%U=%U", "state", state);
 
@@ -255,15 +292,55 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 		goto out;
 	}
 
+	/* how do you close wfd? */
 
-	/* TODO */
 	/* listen for response on plumb */
-	/* verify state1 == state2 */
-	/* exchange code with code_challenge for token */
-	/* print tokens */
-	/* done! */
-	r = 0;
+	if((ofd = plumbopen("oauth", OREAD)) < 0){
+		werrstr("plumbopen: %r");
+		r = -1;
+		goto out;
+	}
+
+	while((pp = plumbrecv(ofd)) != nil){
+		if((state2 = plumblookup(pp->attr, "state")) == nil
+		|| (code = plumblookup(pp->attr, "code")) == nil
+		|| strcmp(state, state2) != 0){
+			plumbfree(pp);
+			continue;
+		}
+		j = urlpost(disc.token_endpoint, client_id, client_secret,
+					"code", code,
+					"code_verifier", verifier,
+					"redirect_uri", "http://127.0.0.1:4812",
+					"grant_type", "authorization_code",
+					nil);
+
+		if(j == nil){
+			werrstr("urlpost: %r");
+			r = -1;
+			goto out;
+		}
+
+		if(printkey(issuer, client_id, client_secret, scope, j) < 0){
+			werrstr("printkey: %r");
+			plumbfree(pp);
+			r = -1;
+			goto out;
+		}
+		jsonfree(j);
+		plumbfree(pp);
+		break;
+	}
+
+	if(pp == nil){
+		werrstr("plumbrecv: %r");
+		r = -1;
+		goto out;
+	}
+
+
+	r = 0;
 	out:
 	jsondestroy(discelems, nelem(discelems), &disc);
-	return 0;
+	return r;
 }

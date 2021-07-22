@@ -137,6 +137,8 @@ genhttp(Protocol *proto, char *host, char *req, HTTPHeader *hdr)
 		proto->close(fd);
 		return nil;
 	}
+	if(hdr->contentlength == 0)
+		hdr->contentlength = -1; /* google doesn't send a content-length header */
 	if(hdr->contentlength >= MaxResponse){
 		werrstr("response too long");
 		proto->close(fd);
