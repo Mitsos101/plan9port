@@ -224,7 +224,7 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	verifier[Verifierlen] = '\0';
 	state[Statelen] = '\0';
 
-	sha2_256(verifier, sizeof verifier, hash, nil);
+	sha2_256(verifier, Verifierlen, hash, nil);
 	snprint(challenge, sizeof challenge, "%.*[", sizeof hash, hash);
 
 	if((pos = strchr(challenge, '=')) != nil)
@@ -263,9 +263,9 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 	/* append scope to url */
 	fmtprint(&fmt, "&%U=%U", "scope", scope);
 	/* append code_challenge to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge", verifier);
+	fmtprint(&fmt, "&%U=%U", "code_challenge", challenge);
 	/* append code_challenge_method to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge_method", "plain");
+	fmtprint(&fmt, "&%U=%U", "code_challenge_method", "S256");
 	/* append state to url */
 	fmtprint(&fmt, "&%U=%U", "state", state);
 
@@ -323,6 +323,7 @@ authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
 
 		if(printkey(issuer, client_id, client_secret, scope, j) < 0){
 			werrstr("printkey: %r");
+			jsonfree(j);
 			plumbfree(pp);
 			r = -1;
 			goto out;
