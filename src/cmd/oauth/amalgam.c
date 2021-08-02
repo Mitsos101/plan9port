@@ -1,19 +1,9 @@
-#include <u.h>
-#include <errno.h>
+#include "dat.h"
 #include <ctype.h>
-#include <libc.h>
-#include <fcall.h>
-#include <thread.h>
-#include <9pclient.h>
-#include <mp.h>
-#include <libsec.h>
-#include <plumb.h>
+#include <json.h>
 
 #define USER_AGENT    "oauthtest"
 
-void*	emalloc(int);
-void*	erealloc(void*, int);
-char*	estrdup(char*);
 int	urlencodefmt(Fmt*);
 
 // Wrapper to hide whether we're using OpenSSL or macOS' libNetwork for HTTPS.
@@ -455,178 +445,6 @@ refreshflow(char *issuer, char *scope, char *client_id, char *client_secret, cha
 		werrstr("printkey: %r");
 		goto out;
 	}
-
-	r = 0;
-	out:
-	jsondestroy(discelems, nelem(discelems), &disc);
-	return r;
-}
-
-int
-fillrandom(char *s, int n)
-{
-	int len;
-	char *pos;
-	char buf[256];
-	char buf2[256];
-
-	if(n % 4 != 0){
-		werrstr("length must be divisible by 4");
-		return -1;
-	}
-	len = (n / 4) * 3;
-
-	genrandom(buf, len);
-	snprint(buf2, sizeof buf2, "%.*[", len, buf);
-
-	if((pos = strchr(buf2, '=')) != nil)
-		*pos = '\0';
-	while((pos = strchr(buf2, '+')) != nil)
-		*pos = '-';
-	while((pos = strchr(buf2, '/')) != nil)
-		*pos = '_';
-
-	strcpy(s, buf2);
-
-	return 0;
-
-}
-
-int
-authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret)
-{
-	char verifier[Verifierlen + 1];
-	char hash[SHA2_256dlen];
-	char challenge[2 * (sizeof hash)];
-	char state[Statelen + 1];
-	char *pos;
-	char *s;
-	char *state2;
-	char *code;
-	Discovery disc;
-	JSON *j;
-	Plumbmsg pm;
-	Plumbmsg* pp;
-	Fmt fmt;
-	int wfd;
-	int ofd;
-	int r;
-	int i;
-
-
-	memset(&disc, 0, sizeof disc);
-	fmtstrinit(&fmt);
-	/* generate code verifier and state */
-	if(fillrandom(verifier, Verifierlen) < 0 || fillrandom(state, Statelen) < 0){
-		r = -1;
-		werrstr("fillrandom: %r");
-	}
-	verifier[Verifierlen] = '\0';
-	state[Statelen] = '\0';
-
-	sha2_256(verifier, Verifierlen, hash, nil);
-	snprint(challenge, sizeof challenge, "%.*[", sizeof hash, hash);
-
-	if((pos = strchr(challenge, '=')) != nil)
-		*pos = '\0';
-	while((pos = strchr(challenge, '+')) != nil)
-		*pos = '-';
-	while((pos = strchr(challenge, '/')) != nil)
-		*pos = '_';
-
-	/* parse discovery document */
-	r = discoveryget(issuer, &disc);
-	if(r < 0){
-		werrstr("discoveryget: %r");
-		return -1;
-	}
-
-	fmtprint(&fmt, "%s?", disc.authorization_endpoint);
-	/* append client_id to url */
-	fmtprint(&fmt, "%U=%U", "client_id", client_id);
-	/* append redirect_uri to url */
-	fmtprint(&fmt, "&%U=%U", "redirect_uri", "http://127.0.0.1:4812"); /* it is difficult to register a scheme for the plumber */
-	/* append response_type to url */
-	fmtprint(&fmt, "&%U=%U", "response_type", "code");
-	/* append scope to url */
-	fmtprint(&fmt, "&%U=%U", "scope", scope);
-	/* append code_challenge to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge", challenge);
-	/* append code_challenge_method to url */
-	fmtprint(&fmt, "&%U=%U", "code_challenge_method", "S256");
-	/* append state to url */
-	fmtprint(&fmt, "&%U=%U", "state", state);
-
-
-	if((s = fmtstrflush(&fmt)) == nil){
-		werrstr("fmtstrflush: %r");
-		r = -1;
-		goto out;
-	}
-
-
-	/* plumb url to browser */
-	if((wfd = plumbopen("send", OWRITE)) < 0){
-		werrstr("plumbopen: %r");
-		r = -1;
-		goto out;
-	}
-
-	pm = (Plumbmsg){"oauth", "web", nil, "text", nil, strlen(s), s};
-
-	if(plumbsend(wfd, &pm) < 0){
-		werrstr("plumbsend: %r");
-		r = -1;
-		goto out;
-	}
-
-	/* how do you close wfd? */
-
-	/* listen for response on plumb */
-	if((ofd = plumbopen("oauth", OREAD)) < 0){
-		werrstr("plumbopen: %r");
-		r = -1;
-		goto out;
-	}
-
-	while((pp = plumbrecv(ofd)) != nil){
-		if((state2 = plumblookup(pp->attr, "state")) == nil
-		|| (code = plumblookup(pp->attr, "code")) == nil
-		|| strcmp(state, state2) != 0){
-			plumbfree(pp);
-			continue;
-		}
-		j = urlpost(disc.token_endpoint, client_id, client_secret,
-					"code", code,
-					"code_verifier", verifier,
-					"redirect_uri", "http://127.0.0.1:4812",
-					"grant_type", "authorization_code",
-					nil);
-
-		if(j == nil){
-			werrstr("urlpost: %r");
-			r = -1;
-			goto out;
-		}
-
-		if(printkey(issuer, client_id, client_secret, scope, j) < 0){
-			werrstr("printkey: %r");
-			jsonfree(j);
-			plumbfree(pp);
-			r = -1;
-			goto out;
-		}
-		jsonfree(j);
-		plumbfree(pp);
-		break;
-	}
-
-	if(pp == nil){
-		werrstr("plumbrecv: %r");
-		r = -1;
-		goto out;
-	}
-
 
 	r = 0;
 	out:
@@ -1524,3 +1342,60 @@ urlencodefmt(Fmt *fmt)
 	return 0;
 }
 
+void
+usage(void)
+{
+	fprint(2, "usage: oauth [-dr] issuer scope client_id client_secret [refresh_token]\n");
+	threadexitsall("usage");
+}
+
+void
+threadmain(int argc, char **argv)
+{
+	int usedev;
+	int useref;
+	char *issuer, *scope, *client_id, *client_secret, *refresh_token;
+
+	usedev = 0;
+	useref = 0;
+	ARGBEGIN{
+	default:
+		usage();
+	case 'd':
+		usedev++;
+		break;
+	case 'r':
+		useref++;
+		break;
+	}ARGEND
+
+	if(argc != 3 && argc != 4 && argc != 5)
+		usage();
+
+	quotefmtinstall();
+	fmtinstall('[', encodefmt);  // base-64
+	fmtinstall('J', JSONfmt);
+	fmtinstall('U', urlencodefmt);
+
+	issuer = argv[0];
+	scope = argv[1];
+	client_id = argv[2];
+	client_secret = argv[3];
+	if(useref){
+		if(argc != 5){
+			sysfatal("missing refresh token");
+		}
+		refresh_token = argv[4];
+		if(refreshflow(issuer, scope, client_id, client_secret, refresh_token) < 0){
+			sysfatal("refreshflow: %r");
+		}
+	} else if(usedev){
+		if(deviceflow(issuer, scope, client_id, client_secret) < 0){
+			sysfatal("deviceflow: %r");
+		}
+	} else{
+		sysfatal("no flow specified");
+	}
+
+	threadexitsall(nil);
+}
