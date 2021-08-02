@@ -148,12 +148,12 @@ discoveryget(char *issuer, Discovery *disc)
 		return -1;
 	}
 
-	if(disc.authorization_endpoint == nil){
+	if(disc->authorization_endpoint == nil){
 		werrstr("no authorization_endpoint");
 		return -1;
 	}
 
-	if(disc.token_endpoint == nil){
+	if(disc->token_endpoint == nil){
 		werrstr("no token_endpoint");
 		return -1;
 	}
@@ -209,7 +209,6 @@ deviceflow(char *issuer, char *scope, char *client_id, char *client_secret)
 
 	memset(&disc, 0, sizeof disc);
 	memset(&dr, 0, sizeof dr);
-	memset(&tr, 0, sizeof tr);
 
 	r = discoveryget(issuer, &disc);
 	if(r < 0){
@@ -241,8 +240,6 @@ deviceflow(char *issuer, char *scope, char *client_id, char *client_secret)
 		            "device_code", dr.device_code,
 		            nil);
 		if(j == nil){
-			jsondestroy(trelems, nelem(trelems), &tr);
-			memset(&tr, 0, sizeof tr);
 			/* check for special errors, don't give up yet */
 			rerrstr(errbuf, sizeof errbuf);
 			if(strstr(errbuf, "authorization_pending") != nil){
@@ -303,6 +300,7 @@ refreshflow(char *issuer, char *scope, char *client_id, char *client_secret, cha
 	r = 0;
 	out:
 	jsondestroy(discelems, nelem(discelems), &disc);
+	return r;
 }
 
 int
