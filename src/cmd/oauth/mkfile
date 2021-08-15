@@ -5,11 +5,14 @@ TARG=oauth
 HFILES=a.h
 
 OFILES=\
+	flow.$O\
 	http.$O\
+	idn.$O\
 	json.$O\
 	jsonrpc.$O\
+	macos.$O\
 	main.$O\
-	openssl.$O\
+	printjson.$O\
 	url.$O\
 	util.$O\
 
