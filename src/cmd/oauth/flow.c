@@ -17,6 +17,7 @@ struct Elem
 typedef struct Discovery Discovery;
 struct Discovery
 {
+	char *issuer;
 	char *authorization_endpoint;
 	char *token_endpoint;
 	char *device_authorization_endpoint;
@@ -24,6 +25,7 @@ struct Discovery
 
 static Elem discelems[] =
 {
+	{"issuer", JSONString, offsetof(Discovery, issuer)},
 	{"authorization_endpoint", JSONString, offsetof(Discovery, authorization_endpoint)},
 	{"token_endpoint", JSONString, offsetof(Discovery, token_endpoint)},
 	{"device_authorization_endpoint", JSONString, offsetof(Discovery, device_authorization_endpoint)},
@@ -183,6 +185,7 @@ discoveryget(char *issuer, Discovery *disc)
 	return 0;
 
 }
+
 int
 printkey(char *issuer, char *client_id, char *client_secret, char *scope, JSON *j)
 {
