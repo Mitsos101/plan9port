@@ -142,3 +142,5 @@ int	idn2utf(char *name, char *buf, int nbuf);
 // flows
 
 int	authcodeflow(char *issuer, char *scope, char *client_id, char *client_secret);
+int	deviceflow(char *issuer, char *scope, char *client_id, char *client_secret);
+int	deviceflow(char *issuer, char *scope, char *client_id, char *client_secret, char *refresh_token);
