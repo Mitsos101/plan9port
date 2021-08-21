@@ -133,10 +133,18 @@ readjson(JSON *j, Elem* e, int n, void *out)
 int
 discoveryget(char *issuer, Discovery *disc)
 {
-	/* TODO: support multiple issuers per host and validate the issuer */
 	JSON *jv;
+	Url *u;
+	char buf[256];
 
-	jv = jsonrpc(&https, issuer, "/.well-known/openid-configuration", nil, nil, nil);
+	if((u = saneurl(url(issuer))) == nil){
+		werrstr("url parsing error");
+		return -1;
+	}
+
+	snprint(buf, sizeof buf, "%s%s", u->path ? u->path : "", "/.well-known/openid-configuration");
+	jv = jsonrpc(&https, u->host, buf, nil, nil, nil);
+	freeurl(u);
 	if(jv == nil){
 		werrstr("jsonrpc: %r");
 		return -1;
@@ -150,18 +158,31 @@ discoveryget(char *issuer, Discovery *disc)
 
 	if(disc->authorization_endpoint == nil){
 		werrstr("no authorization_endpoint");
+		jsonfree(jv);
 		return -1;
 	}
 
 	if(disc->token_endpoint == nil){
 		werrstr("no token_endpoint");
+		jsonfree(jv);
+		return -1;
+	}
+
+	if(disc->issuer == nil){
+		werrstr("no issuer");
+		jsonfree(jv);
+		return -1;
+	}
+
+	if(strcmp(issuer, disc->issuer) != 0){
+		werrstr("issuers don't match");
+		jsonfree(jv);
 		return -1;
 	}
 
 	return 0;
 
 }
-
 int
 printkey(char *issuer, char *client_id, char *client_secret, char *scope, JSON *j)
 {

@@ -86,7 +86,7 @@ macosread(Pfd *pfd, void *v, int n)
 				if(receive_error != NULL) {
 					errno = nw_error_get_error_code(receive_error);
 					r = -1;
-				} else {
+				} else if(content != nil) {
 					dispatch_data_apply(content, ^(__unused dispatch_data_t region, size_t offset, const void *buf, size_t size) {
 							memcpy(v + offset, buf, size);
 							r += size;
