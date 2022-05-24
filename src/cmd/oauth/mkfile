@@ -1,0 +1,20 @@
+<$PLAN9/src/mkhdr
+
+TARG=oauth
+
+HFILES=a.h
+
+OFILES=\
+	flow.$O\
+	http.$O\
+	idn.$O\
+	json.$O\
+	jsonrpc.$O\
+	macos.$O\
+	main.$O\
+	printjson.$O\
+	url.$O\
+	util.$O\
+
+<$PLAN9/src/mkone
+
